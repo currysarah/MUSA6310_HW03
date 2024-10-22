@@ -28,6 +28,10 @@ library(sf)
 library(tidycensus)
 library(tigris)
 
+acs_variable_list.2022 <- load_variables(2022, #year
+                                         "acs5", #five year ACS estimates
+                                         cache = TRUE)
+
 # msa_mhi_22_cnt <- msa_mhi_22 %>%
 #   arrange(desc(popE)) %>%
 #   select(NAME, mhiE) %>%
@@ -104,7 +108,7 @@ ggplot() +
 
 ```
 
-The first histogram is a pretty run of the mill export from ggplot with very little manipulation to the settings. Comments I received in class centered on asking "so what?" about what they were supposed to learn. I had wanted the graph to show that Philadelphia (the city I was about to discuss in my Assignment 1 article) was in a higher percentile of national MSA MHI than folks might assume. With an unlabeled y axis and a lot of x axis bins, there are too many questions raised about the other data points. Draft Two attempted to remedy this by lessening the number of bins and adjusting labels to be more clear. However, the x axis tick marks and the bins still don't align, making it unclear how many MSA's fall within what range of MHI. This is resolved at the final stage. The ink to data ratio is perhaps still not right, and the "so what?" of the graph is still weak. I no longer plan to use this exact graph in my final article - I think that the best way to share information in my article about income vs cost of living is with a graph that shows more nuanced data.
+The first histogram is a pretty run of the mill export from ggplot with very little manipulation to the settings; it's the one I included in my article for assignment 1. Comments I received in class centered on asking "so what?" about what they were supposed to learn. I had wanted the graph to show that Philadelphia (the city I was about to discuss in my Assignment 1 article) was in a higher percentile of national MSA MHI than folks might assume. With an unlabeled y axis and a lot of x axis bins, there are too many questions raised about the other data points. Draft Two attempted to remedy this by lessening the number of bins and adjusting labels to be more clear. However, the x axis tick marks and the bins still don't align, making it unclear how many MSA's fall within what range of MHI. This is resolved at the final stage. The ink to data ratio is perhaps still not right, and the "so what?" of the graph is still weak. I no longer plan to use this exact graph in my final article - I think that the best way to share information in my article about income vs cost of living is with a graph that shows more nuanced data.
 
 ## Graph Two
 
@@ -163,6 +167,7 @@ ggplot() +
            label = "a CT in Prince George's County", hjust = 0, color = "red") +
   annotate(geom = "text", x = 3600, y = 400000000,
            label = "a CT where the Census Bureau \nis located", hjust = 0, color = "red") +
+  annotate(geom = "rect", xmin = 3725, xmax = 3775, ymin = 20000000, ymax = 350000000, fill = "red") +
   labs(title = "FINAL: 2020 Census Tract Area vs Population Size",
        subtitle = "Maryland",
        x = "Population",
@@ -172,8 +177,387 @@ ggplot() +
 
 ```
 
-The census bureau defines a census tract as a "small, relatively permanent statistical subdivision of a county. Census tracts average about 4,000 inhabitants (with a minimum population of 1,200 and a maximum of 8,000)." The United States Census Bureau is located in Hillcrest Heights, Maryland and this graph aims to take a look at how good the Bureau is at following its own rules in its home state. 
+This dot graph is meant to convey the inconsistencies among Census Tracts in just one American state. The census bureau defines a census tract as a "small, relatively permanent statistical subdivision of a county. Census tracts average about 4,000 inhabitants (with a minimum population of 1,200 and a maximum of 8,000)." The United States Census Bureau is located in Hillcrest Heights, Maryland and this graph aims to take a look at how good the Bureau is at following its own rules in its home state. The first draft shows us the extents of our data points and reveals a few outliers that might be interesting to highlight. Upon further research, a couple of the outliers are not particularly interesting, but perhaps they become intriguing when compared to the Census Bureau's census tract which is squarely within the stated regulations. The final edition of the graph endeavors to highlight the window of population sizes and varying densities that still fit into the definition of a census tract with a colored rectangle. The ink to data ratio on this graph is definitely better than the first graph. 
 
 
 
 ## Graph Three
+
+```{r g3_data, message=FALSE, warning=FALSE, include=FALSE}
+
+blackest_counties <- get_acs(geography = "county",
+                             year = 2022,
+                             variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                             geometry = FALSE,
+                             output = "wide") %>%
+  mutate(black_percent = black_popE / popE) %>%
+  arrange(desc(popE)) %>%
+  head(50) %>%
+  arrange(desc(black_percent))
+
+years <- seq(2009, 2022)
+
+wayne_poptime_all <- data.frame()
+
+for (year in years) {
+  wayne_poptime <- get_acs(geography = "county",
+                      state = "MI",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "26163") %>%
+    mutate(yr = year)
+  
+  wayne_poptime_all <- rbind(wayne_poptime_all, data.frame(Year = year, Population = wayne_poptime$popE, BlackPopulation = wayne_poptime$black_popE, Name = wayne_poptime$NAME))
+}
+
+phil_poptime_all <- data.frame()
+
+for (year in years) {
+  phil_poptime <- get_acs(geography = "county",
+                      state = "PA",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "42101") %>%
+    mutate(yr = year)
+  
+  phil_poptime_all <- rbind(phil_poptime_all, data.frame(Year = year, Population = phil_poptime$popE, BlackPopulation = phil_poptime$black_popE, Name= phil_poptime$NAME))
+}
+
+fulton_poptime_all <- data.frame()
+
+for (year in years) {
+  fulton_poptime <- get_acs(geography = "county",
+                      state = "GA",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "13121") %>%
+    mutate(yr = year)
+  
+  fulton_poptime_all <- rbind(fulton_poptime_all, data.frame(Year = year, Population = fulton_poptime$popE, BlackPopulation = fulton_poptime$black_popE, Name = fulton_poptime$NAME))
+}
+
+bronx_poptime_all <- data.frame()
+
+for (year in years) {
+  bronx_poptime <- get_acs(geography = "county",
+                      state = "NY",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "36005") %>%
+    mutate(yr = year)
+  
+  bronx_poptime_all <- rbind(bronx_poptime_all, data.frame(Year = year, Population = bronx_poptime$popE, BlackPopulation = bronx_poptime$black_popE, Name = bronx_poptime$NAME))
+}
+
+meckl_poptime_all <- data.frame()
+
+for (year in years) {
+  meckl_poptime <- get_acs(geography = "county",
+                      state = "NC",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "37119") %>%
+    mutate(yr = year)
+  
+  meckl_poptime_all <- rbind(meckl_poptime_all, data.frame(Year = year, Population = meckl_poptime$popE, BlackPopulation = meckl_poptime$black_popE, Name = meckl_poptime$NAME))
+}
+
+kings_poptime_all <- data.frame()
+
+for (year in years) {
+  kings_poptime <- get_acs(geography = "county",
+                      state = "NY",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "36047") %>%
+    mutate(yr = year)
+  
+  kings_poptime_all <- rbind(kings_poptime_all, data.frame(Year = year, Population = kings_poptime$popE, BlackPopulation = kings_poptime$black_popE, Name = kings_poptime$NAME))
+}
+
+duval_poptime_all <- data.frame()
+
+for (year in years) {
+  duval_poptime <- get_acs(geography = "county",
+                      state = "FL",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "12031") %>%
+    mutate(yr = year)
+  
+  duval_poptime_all <- rbind(duval_poptime_all, data.frame(Year = year, Population = duval_poptime$popE, BlackPopulation = duval_poptime$black_popE, Name = duval_poptime$NAME))
+}
+
+cuyahoga_poptime_all <- data.frame()
+
+for (year in years) {
+  cuyahoga_poptime <- get_acs(geography = "county",
+                      state = "OH",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "39035") %>%
+    mutate(yr = year)
+  
+  cuyahoga_poptime_all <- rbind(cuyahoga_poptime_all, data.frame(Year = year, Population = cuyahoga_poptime$popE, BlackPopulation = cuyahoga_poptime$black_popE, Name = cuyahoga_poptime$NAME))
+}
+
+broward_poptime_all <- data.frame()
+
+for (year in years) {
+  broward_poptime <- get_acs(geography = "county",
+                      state = "FL",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "12011") %>%
+    mutate(yr = year)
+  
+  broward_poptime_all <- rbind(broward_poptime_all, data.frame(Year = year, Population = broward_poptime$popE, BlackPopulation = broward_poptime$black_popE, Name = broward_poptime$NAME))
+}
+
+stlouis_poptime_all <- data.frame()
+
+for (year in years) {
+  stlouis_poptime <- get_acs(geography = "county",
+                      state = "MO",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "29189") %>%
+    mutate(yr = year)
+  
+  stlouis_poptime_all <- rbind(stlouis_poptime_all, data.frame(Year = year, Population = stlouis_poptime$popE, BlackPopulation = stlouis_poptime$black_popE, Name = stlouis_poptime$NAME))
+}
+
+frank_poptime_all <- data.frame()
+
+for (year in years) {
+  frank_poptime <- get_acs(geography = "county",
+                      state = "OH",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "39049") %>%
+    mutate(yr = year)
+  
+  frank_poptime_all <- rbind(frank_poptime_all, data.frame(Year = year, Population = frank_poptime$popE, BlackPopulation = frank_poptime$black_popE, Name = frank_poptime$NAME))
+}
+
+cook_poptime_all <- data.frame()
+
+for (year in years) {
+  cook_poptime <- get_acs(geography = "county",
+                      state = "IL",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "17031") %>%
+    mutate(yr = year)
+  
+  cook_poptime_all <- rbind(cook_poptime_all, data.frame(Year = year, Population = cook_poptime$popE, BlackPopulation = cook_poptime$black_popE, Name = cook_poptime$NAME))
+}
+
+dallas_poptime_all <- data.frame()
+
+for (year in years) {
+  dallas_poptime <- get_acs(geography = "county",
+                      state = "TX",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "48113") %>%
+    mutate(yr = year)
+  
+  dallas_poptime_all <- rbind(dallas_poptime_all, data.frame(Year = year, Population = dallas_poptime$popE, BlackPopulation = dallas_poptime$black_popE, Name = dallas_poptime$NAME))
+}
+
+orange_poptime_all <- data.frame()
+
+for (year in years) {
+  orange_poptime <- get_acs(geography = "county",
+                      state = "FL",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "12095") %>%
+    mutate(yr = year)
+  
+  orange_poptime_all <- rbind(orange_poptime_all, data.frame(Year = year, Population = orange_poptime$popE, BlackPopulation = orange_poptime$black_popE, Name = orange_poptime$NAME))
+}
+
+wake_poptime_all <- data.frame()
+
+for (year in years) {
+  wake_poptime <- get_acs(geography = "county",
+                      state = "NC",
+                      year = year, 
+                     variables = c(pop = "B01003_001", black_pop = "B01001B_001"),
+                     geometry = FALSE,
+                     output = "wide"
+) %>%
+    filter(GEOID == "37183") %>%
+    mutate(yr = year)
+  
+  wake_poptime_all <- rbind(wake_poptime_all, data.frame(Year = year, Population = wake_poptime$popE, BlackPopulation = wake_poptime$black_popE, Name = wake_poptime$NAME))
+}
+
+wayne_poptime_all <- wayne_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+phil_poptime_all <- phil_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+fulton_poptime_all <- fulton_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+bronx_poptime_all <- bronx_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+meckl_poptime_all <- meckl_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+kings_poptime_all <- kings_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+duval_poptime_all <- duval_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+cuyahoga_poptime_all <- cuyahoga_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+broward_poptime_all <- broward_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+stlouis_poptime_all <- stlouis_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+frank_poptime_all <- frank_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+cook_poptime_all <- cook_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+dallas_poptime_all <- dallas_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+orange_poptime_all <- orange_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+wake_poptime_all <- wake_poptime_all %>%
+  mutate(BlackPercent = BlackPopulation/Population)
+
+
+```
+
+```{r g3_graph, echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot() +
+  geom_line(data = wayne_poptime_all, aes(x = Year, y = Population), color = "red", size = 1) +
+  geom_line(data = wayne_poptime_all, aes(x = Year, y = BlackPopulation), color = "red4", size = 1) +
+  geom_line(data = phil_poptime_all, aes(x = Year, y = Population), color = "blue", size = 1) +
+  geom_line(data = phil_poptime_all, aes(x = Year, y = BlackPopulation), color = "blue4", size = 1) +
+  geom_line(data = fulton_poptime_all, aes(x = Year, y = Population), color = "orange", size = 1) +
+  geom_line(data = fulton_poptime_all, aes(x = Year, y = BlackPopulation), color = "orange4", size = 1) +
+  geom_line(data = bronx_poptime_all, aes(x = Year, y = Population), color = "purple", size = 1) +
+  geom_line(data = bronx_poptime_all, aes(x = Year, y = BlackPopulation), color = "purple4", size = 1) +
+  geom_line(data = meckl_poptime_all, aes(x = Year, y = Population), color = "green", size = 1) +
+  geom_line(data = meckl_poptime_all, aes(x = Year, y = BlackPopulation), color = "green4", size = 1) +
+  labs(title = "DRAFT ONE: Population & Black Population in US Blackest Large Counties",
+       subtitle = "Fulton County, Philadelphia County, Wayne County, Bronx County, Mecklenburg County",
+       x = "Population",
+       y = "Year",
+       caption = "Source: ACS, U.S. Census Bureau") 
+
+ggplot() +
+  geom_line(data = wayne_poptime_all, aes(x = Year, y = Population), color = "red", size = 1) +
+  geom_line(data = wayne_poptime_all, aes(x = Year, y = BlackPopulation), color = "red4", size = 0.5) +
+  annotate(geom = "text", x = 2022, y = 1781641,
+           label = " Wayne County, MI", hjust = 0, color = "red") +
+  geom_line(data = phil_poptime_all, aes(x = Year, y = Population), color = "blue", size = 1) +
+  annotate(geom = "text", x = 2022, y = 1593208,
+           label = " Philadelphia County, PA", hjust = 0, color = "blue") +
+  geom_line(data = phil_poptime_all, aes(x = Year, y = BlackPopulation), color = "blue4", size = 0.5) +
+  geom_line(data = fulton_poptime_all, aes(x = Year, y = Population), color = "orange", size = 1) +
+  annotate(geom = "text", x = 2022, y = 1061944,
+           label = " Fulton County, GA", hjust = 0, color = "orange") +
+  geom_line(data = fulton_poptime_all, aes(x = Year, y = BlackPopulation), color = "orange4", size = 0.5) +
+  geom_line(data = bronx_poptime_all, aes(x = Year, y = Population), color = "purple", size = 1) +
+  annotate(geom = "text", x = 2022, y = 1443229,
+           label = " Bronx County, NY", hjust = 0, color = "purple") +
+  geom_line(data = bronx_poptime_all, aes(x = Year, y = BlackPopulation), color = "purple4", size = 0.5) +
+  geom_line(data = meckl_poptime_all, aes(x = Year, y = Population), color = "green", size = 1) +
+  annotate(geom = "text", x = 2022, y = 1115403,
+           label = " Mecklenburg County, NC", hjust = 0, color = "green") +
+  geom_line(data = meckl_poptime_all, aes(x = Year, y = BlackPopulation), color = "green4", size = 0.5) +
+  annotate(geom = "rect", xmin = 2022, xmax = 2027, ymin = 0, ymax = 2000000, fill = "transparent") +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(title = "DRAFT TWO: Population & Black Population in US Blackest Large Counties",
+       subtitle = "Fulton County, Philadelphia County, Wayne County, Bronx County, Mecklenburg County",
+       x = "Year",
+       y = "Population",
+       caption = "Source: ACS, U.S. Census Bureau") +
+  theme_minimal()
+
+ggplot() +
+  annotate(geom = "text", x = 2022, y = 0.378,
+           label = " Wayne County, MI", hjust = 0, color = "red") +
+  geom_line(data = wayne_poptime_all, aes(x = Year, y = BlackPercent), color = "red", size = 0.75) +
+  annotate(geom = "text", x = 2022, y = 0.405,
+           label = " Philadelphia County, PA", hjust = 0, color = "blue") +
+  geom_line(data = phil_poptime_all, aes(x = Year, y = BlackPercent), color = "blue", size = 0.75) +
+  annotate(geom = "text", x = 2022, y = 0.435,
+           label = " Fulton County, GA", hjust = 0, color = "orange") +
+  geom_line(data = fulton_poptime_all, aes(x = Year, y = BlackPercent), color = "orange", size = 0.75) +
+  annotate(geom = "text", x = 2022, y = 0.345,
+           label = " Bronx County, NY", hjust = 0, color = "purple4") +
+  geom_line(data = bronx_poptime_all, aes(x = Year, y = BlackPercent), color = "purple4", size = 0.75) +
+  annotate(geom = "text", x = 2022, y = 0.316,
+           label = " Mecklenburg County, NC", hjust = 0, color = "green4") +
+  geom_line(data = meckl_poptime_all, aes(x = Year, y = BlackPercent), color = "green4", size = 0.75) +
+  geom_line(data = kings_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = duval_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = cuyahoga_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = broward_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = stlouis_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = frank_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = cook_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = dallas_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = orange_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  geom_line(data = wake_poptime_all, aes(x = Year, y = BlackPercent), color = "gray75", size = 0.5) +
+  annotate(geom = "rect", xmin = 2022, xmax = 2027, ymin = 0, ymax = .50, fill = "transparent") +
+  scale_y_continuous(labels = scales::label_percent()) +
+  scale_x_continuous(breaks = seq(from = 2010, to = 2022, by = 3)) +
+  labs(title = "FINAL: Percentage Black Population in Largest US Counties",
+       subtitle = "2009 - 2022",
+       x = "Year",
+       y = " ",
+       caption = "Source: ACS, U.S. Census Bureau") +
+  theme_minimal()
+  
+```
+
+I wanted to do a line graph over time and it was nice to get some practice with it. I played around with the statistics of Black populations in a few different ways before landing on tracking the share of the population over time. Nothing particularly interesting was revealed (in terms of a sharp incline or decline), so if I had more time to keep digging, I would find a more dramatic statistic. That being said, the graph does show and highlight the 5 largest, Blackest counties in the US, and illustrates that they've been somewhat steady for over 10 years - decreasing for Philadelphia and Wayne Counties, but increasing for Mecklenberg County. 
+
+
